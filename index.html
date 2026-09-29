@@ -118,8 +118,9 @@ button{font:inherit}
     </div>
   </div>
   <div class="row2" id="gameActions">
-    <button class="action" id="restartBtn">Recommencer</button>
+    <button class="action" id="undoBtn">↶ Annuler</button>
     <button class="action secondary" id="hintBtn">Indice −80</button>
+    <button class="action secondary" id="restartBtn" style="grid-column:1/-1">Recommencer</button>
   </div>
   <div class="rules"><strong>Règle :</strong> le chiffre indique exactement le nombre de cases à parcourir horizontalement ou verticalement. La case quittée disparaît. Visite les 25 cases sans te bloquer.</div>
  </div>
@@ -141,7 +142,7 @@ button{font:inherit}
    <strong>5.</strong> Tu gagnes si tu visites les 25 cases. Sinon, tu es bloqué.
   </div>
   <div class="section-title">LES 100 NIVEAUX</div>
-  <div class="rules">La difficulté augmente progressivement : davantage de faux chemins, de bifurcations et de choix qui semblent bons au début mais condamnent la fin de la grille.</div>
+  <div class="rules">Les niveaux 1 à 10 sont spécialement simplifiés pour apprendre la logique. Ensuite, les faux chemins et les bifurcations arrivent progressivement. Le bouton <strong>Annuler</strong> permet de revenir gratuitement d'un coup en arrière.</div>
   <div class="section-title">ÉTOILES</div>
   <div class="rules">★★★ sans indice · ★★ avec 1 indice · ★ avec plusieurs indices. Les étoiles sont conservées si tu améliores ton résultat.</div>
  </div>
@@ -158,7 +159,7 @@ button{font:inherit}
 <script>
 (()=>{
 const N=5;
-let board=[],current=0,visited=new Set(),moves=0,solution=[],gameOver=false,hintsUsed=0,initialState=null;
+let board=[],current=0,visited=new Set(),moves=0,solution=[],gameOver=false,hintsUsed=0,initialState=null,history=[];
 let gameMode="level",currentLevel=1,infiniteDifficulty="normal",installPrompt=null;
 
 const $=id=>document.getElementById(id);
@@ -219,9 +220,13 @@ function candidate(rng){
  nums[path[24]]=1+Math.floor(rng()*3);
  return{path,nums,b:branchiness(nums,path)};
 }
+const EASY_LEVELS=[{"nums":[2,2,3,3,3,1,2,2,1,1,2,2,1,3,1,3,3,2,3,3,1,3,2,1,1],"path":[16,19,4,1,3,18,15,0,2,17,7,5,6,8,9,14,13,10,12,11,21,24,23,22,20]},{"nums":[3,3,2,3,3,3,2,2,3,3,1,2,1,2,3,1,3,3,1,2,2,3,2,2,2],"path":[16,1,4,19,9,24,14,11,21,6,8,23,13,3,18,17,2,0,15,10,5,20,22,12,7]},{"nums":[2,2,3,3,3,3,3,1,2,2,1,3,2,3,2,3,3,2,1,3,3,2,1,3,3],"path":[16,19,4,1,3,0,2,17,15,18,13,10,5,20,23,8,6,9,7,12,22,21,11,14,24]},{"nums":[3,1,2,2,1,3,2,3,1,1,2,2,1,2,3,3,1,3,3,3,2,3,1,3,1],"path":[5,20,10,0,15,18,3,13,23,8,7,22,17,2,12,11,1,6,16,21,24,19,4,9,14]},{"nums":[3,2,1,3,3,3,3,1,3,3,1,3,2,3,2,3,1,2,2,3,3,3,1,2,2],"path":[8,5,20,23,13,10,15,0,3,18,16,21,24,22,17,19,4,1,11,14,12,2,7,6,9]},{"nums":[2,3,2,3,3,1,1,2,2,2,2,1,2,1,2,2,3,2,3,2,1,2,1,2,2],"path":[18,3,0,2,4,1,16,19,17,15,5,10,20,21,11,12,14,24,22,23,13,8,6,7,9]},{"nums":[3,3,2,3,3,1,2,1,1,3,2,3,2,2,3,1,3,3,3,2,3,2,3,2,3],"path":[16,1,4,19,17,2,0,3,18,15,20,5,10,12,22,7,6,8,9,24,21,23,13,11,14]},{"nums":[2,3,2,3,3,1,1,3,1,1,2,2,1,1,1,3,3,2,1,2,3,3,2,1,3],"path":[3,0,2,4,1,16,19,17,15,18,23,24,9,14,13,8,7,22,12,11,21,6,5,10,20]},{"nums":[2,3,1,3,3,3,2,3,1,1,1,2,2,2,2,2,1,2,3,2,1,3,2,3,1],"path":[18,3,0,2,1,4,19,9,14,24,23,8,13,11,21,6,16,17,7,22,12,10,15,5,20]},{"nums":[3,3,1,3,1,1,2,2,2,1,3,3,2,2,2,2,3,3,1,2,1,1,2,3,1],"path":[18,23,20,21,22,24,19,9,8,6,16,1,4,3,0,15,17,2,7,5,10,13,11,14,12]}];
 function targetForLevel(level){
- const t=(level-1)/99;
- return [Math.round(4+t*16),Math.round(10+t*22)];
+ if(level<=20)return [12,18];
+ if(level<=40)return [14,22];
+ if(level<=60)return [17,25];
+ if(level<=80)return [20,29];
+ return [23,34];
 }
 function choosePuzzle(seed,target){
  const rng=mulberry32(seed),[lo,hi]=target;
@@ -236,8 +241,14 @@ function choosePuzzle(seed,target){
 }
 function loadLevel(level){
  currentLevel=Math.min(100,Math.max(1,level));gameMode="level";
- const seed=hashString("SURVIVANT25-LEVEL-"+currentLevel);
- const best=choosePuzzle(seed,targetForLevel(currentLevel));
+ let best;
+ if(currentLevel<=10){
+  const e=EASY_LEVELS[currentLevel-1];
+  best={nums:[...e.nums],path:[...e.path],b:0};
+ }else{
+  const seed=hashString("SURVIVANT25-LEVEL-"+currentLevel);
+  best=choosePuzzle(seed,targetForLevel(currentLevel));
+ }
  startPuzzle(best,`Niveau ${currentLevel}`);
 }
 function loadInfinite(){
@@ -254,7 +265,7 @@ function loadDaily(){
  startPuzzle(best,"Défi du jour");
 }
 function startPuzzle(best,title){
- board=[...best.nums];solution=[...best.path];current=solution[0];visited=new Set([current]);moves=0;hintsUsed=0;gameOver=false;
+ board=[...best.nums];solution=[...best.path];current=solution[0];visited=new Set([current]);moves=0;hintsUsed=0;gameOver=false;history=[];
  initialState={board:[...board],solution:[...solution],current,title};
  $("gameTitle").textContent=title;$("winbox").classList.remove("show");$("gameActions").style.display="grid";
  setMessage("Choisis une case marquée d'un point blanc.");render();showScreen("game");
@@ -276,6 +287,7 @@ function starsEarned(){return hintsUsed===0?3:hintsUsed===1?2:1}
 
 function moveTo(j){
  if(gameOver||!legalMoves().includes(j))return;
+ history.push({current,visited:[...visited],moves});
  visited.add(j);current=j;moves++;
  if(navigator.vibrate)navigator.vibrate(15);
  if(visited.size===25){
@@ -302,8 +314,16 @@ function render(){
  elLeft.textContent=25-visited.size;elMoves.textContent=moves;elScore.textContent=liveScore();
 }
 function restart(){
- board=[...initialState.board];solution=[...initialState.solution];current=initialState.current;visited=new Set([current]);moves=0;hintsUsed=0;gameOver=false;
+ board=[...initialState.board];solution=[...initialState.solution];current=initialState.current;visited=new Set([current]);moves=0;hintsUsed=0;gameOver=false;history=[];
  $("winbox").classList.remove("show");$("gameActions").style.display="grid";setMessage("C'est reparti.");render();
+}
+function undoMove(){
+ if(history.length===0)return;
+ const prev=history.pop();
+ current=prev.current;visited=new Set(prev.visited);moves=prev.moves;gameOver=false;
+ $("winbox").classList.remove("show");$("gameActions").style.display="grid";
+ setMessage("Coup annulé. Tu peux essayer une autre direction.");
+ render();
 }
 function hint(){
  if(gameOver)return;let next=null;
@@ -339,7 +359,7 @@ $("nextBtn").onclick=()=>{
  else if(gameMode==="infinite")loadInfinite();
  else showScreen("home");
 };
-$("replayBtn").onclick=restart;$("restartBtn").onclick=restart;$("hintBtn").onclick=hint;
+$("replayBtn").onclick=restart;$("restartBtn").onclick=restart;$("undoBtn").onclick=undoMove;$("hintBtn").onclick=hint;
 
 function renderLevels(){
  const grid=$("levelGrid"),un=state.unlocked,stars=state.stars;grid.innerHTML="";
