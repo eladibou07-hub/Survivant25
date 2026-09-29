@@ -1,0 +1,16 @@
+{
+  "name": "Survivant 25",
+  "short_name": "Survivant25",
+  "description": "100 niveaux, défi du jour et mode infini.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
+  "orientation": "portrait",
+  "background_color": "#07101d",
+  "theme_color": "#08101d",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
